@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Nudge Login</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --purple:#6264a7;
+  --purple-d:#4f52a0;
+  --purple-l:#f0f0fb;
+  --green:#237b4b;
+  --green-l:#f0faf4;
+  --amber:#c97d0a;
+  --amber-l:#fff9f0;
+  --red:#c4314b;
+  --red-l:#fdf3f5;
+  --blue:#0f6cbd;
+  --blue-l:#f2f8fd;
+  --border:#e1dfdd;
+  --bg:#f3f2f1;
+  --surface:#fff;
+  --surface-2:#faf9f8;
+  --text:#242424;
+  --muted:#616161;
+  --faint:#999;
+  --shadow:0 18px 42px rgba(0,0,0,.12);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  overflow-x:hidden;
+}
+
+/* Teams-style top bar */
+.topbar{
+  height:48px;
+  background:var(--purple);
+  display:flex;
+  align-items:center;
+  padding:0 18px;
+  color:#fff;
+}
+.tb-brand{display:flex;align-items:center;gap:9px}
+.tb-brand svg{width:18px;height:18px}
+.tb-brand-name{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#7ee0a0;box-shadow:0 0 0 3px rgba(126,224,160,.18)}
+
+.page{
+  min-height:calc(100vh - 48px);
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+}
+
+.hero{
+  padding:64px 72px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.hero-card{
+  max-width:560px;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:5px 11px;
+  border-radius:999px;
+  background:var(--purple-l);
+  color:var(--purple-d);
+  border:1px solid #dddaf3;
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  font-weight:500;
+  margin-bottom:20px;
+}
+.hero-title{
+  font-size:42px;
+  line-height:1.08;
+  letter-spacing:-.04em;
+  font-weight:700;
+  margin-bottom:18px;
+  color:#202124;
+}
+.hero-sub{
+  font-size:15px;
+  line-height:1.75;
+  color:var(--muted);
+  max-width:510px;
+}
+.feature-grid{
+  margin-top:34px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.feature{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.feature-icon{
+  width:28px;height:28px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--purple-l);color:var(--purple-d);
+  font-size:14px;margin-bottom:10px;
+}
+.feature-title{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--text)}
+.feature-sub{font-size:12px;line-height:1.55;color:var(--muted)}
+
+.login-side{
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:54px;
+}
+.login-card{
+  width:100%;
+  max-width:390px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:32px;
+  box-shadow:var(--shadow);
+}
+.login-logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:28px;
+}
+.logo-sq{
+  width:34px;height:34px;border-radius:8px;
+  background:var(--purple);
+  color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:16px;
+}
+.logo-name{font-size:16px;font-weight:700;letter-spacing:-.02em}
+.logo-name span{color:var(--purple)}
+.section-kicker{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  color:var(--faint);
+  margin-bottom:8px;
+}
+.login-title{
+  font-size:25px;
+  font-weight:700;
+  letter-spacing:-.03em;
+  margin-bottom:6px;
+}
+.login-sub{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.65;
+  margin-bottom:24px;
+}
+.form-group{margin-bottom:15px}
+.form-label{
+  display:block;
+  font-size:11px;
+  font-weight:700;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+.input{
+  width:100%;
+  height:44px;
+  border:1px solid #d1d1d1;
+  border-radius:7px;
+  background:#fff;
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  padding:0 12px;
+  outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.input:focus{
+  border-color:var(--purple);
+  box-shadow:0 0 0 3px rgba(98,100,167,.14);
+}
+.input::placeholder{color:#aaa}
+.login-options{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:2px 0 18px;
+  font-size:12px;
+  color:var(--muted);
+}
+.check{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.check input{accent-color:var(--purple)}
+.helper-link{
+  color:var(--purple-d);
+  cursor:pointer;
+  font-weight:600;
+}
+.btn-primary{
+  width:100%;
+  height:44px;
+  border:none;
+  border-radius:7px;
+  background:var(--purple);
+  color:#fff;
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  transition:background .15s, box-shadow .15s, transform .08s;
+}
+.btn-primary:hover{background:var(--purple-d);box-shadow:0 6px 16px rgba(98,100,167,.28)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-primary.loading{opacity:.75;cursor:wait}
+.msg{
+  margin-top:14px;
+  padding:10px 12px;
+  border-radius:7px;
+  font-size:12px;
+  line-height:1.45;
+  display:none;
+}
+.msg.ok{display:block;background:var(--green-l);border:1px solid #c8e8d4;color:var(--green)}
+.msg.err{display:block;background:var(--red-l);border:1px solid #f0c0cc;color:var(--red)}
+.security-note{
+  margin-top:18px;
+  padding:12px;
+  border-radius:9px;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.55;
+}
+.security-note strong{color:var(--text)}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr}
+  .hero{display:none}
+  .login-side{border-left:none;min-height:calc(100vh - 48px);padding:28px}
+  .login-card{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="tb-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <span class="tb-brand-name">Daily Nudge</span>
+  </div>
+  <div class="tb-right"><span class="status-dot"></span><span>Secure workspace</span></div>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="hero-card">
+      <div class="badge">Microsoft Teams inspired interface</div>
+      <h1 class="hero-title">A calmer way to organise work and reduce overload.</h1>
+      <p class="hero-sub">Daily Nudge helps employees prioritise tasks, reduce decision fatigue and receive behavioural nudges that support better daily execution.</p>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">✦</div><div class="feature-title">Smart task order</div><div class="feature-sub">Sequence work around priority, urgency and focus windows.</div></div>
+        <div class="feature"><div class="feature-icon">👥</div><div class="feature-title">Role-based nudges</div><div class="feature-sub">Use social norms, implementation intentions and anti-avoidance prompts.</div></div>
+        <div class="feature"><div class="feature-icon">✓</div><div class="feature-title">Front office</div><div class="feature-sub">Employees manage their personal workflow and wellbeing check-ins.</div></div>
+        <div class="feature"><div class="feature-icon">▦</div><div class="feature-title">Back office</div><div class="feature-sub">Admins review aggregate workflow signals and operational interventions.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="login-side">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-sq">N</div>
+        <div class="logo-name">Daily <span>Nudge</span></div>
+      </div>
+      <div class="section-kicker">Workspace access</div>
+      <h2 class="login-title">Sign in</h2>
+      <p class="login-sub">Enter your company email and password to continue.</p>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="input" id="email" type="email" placeholder="name@company.com" autocomplete="email" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="input" id="password" type="password" placeholder="Enter password" autocomplete="current-password" />
+      </div>
+
+      <div class="login-options">
+        <label class="check"><input type="checkbox" id="remember" checked /> Keep me signed in</label>
+        <span class="helper-link" onclick="resetPassword()">Forgot password?</span>
+      </div>
+
+      <button class="btn-primary" id="loginBtn" onclick="login()">Sign in</button>
+      <div id="msg" class="msg"></div>
+
+      <div class="security-note">
+        <strong>Access is role-based.</strong> Employees open the front office. Admin users open the back office.
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// =========================================
+// CONFIG
+// =========================================
+const SUPABASE_URL = 'https://xfttnkfefnhszirxygcn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_NHSpKeGFRUp99Y3em-d0kA_2BaI5PrH';
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// =========================================
+// SIGN IN
+// =========================================
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('loginBtn');
+
+  if(!email || !password){
+    showMessage('Please enter your email and password.', 'err');
+    return;
+  }
+
+  btn.classList.add('loading');
+  btn.textContent = 'Signing in...';
+
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+
+  btn.classList.remove('loading');
+  btn.textContent = 'Sign in';
+
+  if(error){
+    showMessage(error.message, 'err');
+    return;
+  }
+
+  const user = data.user;
+  const role = await getUserRole(user, email);
+  localStorage.setItem('dn_role', role);
+  localStorage.setItem('dn_user_email', email);
+
+  showMessage('Login successful. Redirecting...', 'ok');
+
+  setTimeout(() => {
+    if(role === 'admin'){
+      window.location.href = 'admin.html';
+    } else {
+      window.location.href = 'app.html';
+    }
+  }, 700);
+}
+
+// =========================================
+// ROLE DETECTION
+// Recommended: create a Supabase profiles table with columns id and role.
+// Fallback for prototype: emails containing "admin" go to admin.html.
+// =========================================
+async function getUserRole(user, email){
+  try {
+    const { data, error } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if(!error && data && data.role){
+      return data.role;
+    }
+  } catch(e) {}
+
+  if(email.toLowerCase().includes('admin')) return 'admin';
+  return 'user';
+}
+
+// =========================================
+// PASSWORD RESET
+// =========================================
+async function resetPassword(){
+  const email = document.getElementById('email').value.trim();
+  if(!email){
+    showMessage('Enter your email first, then click Forgot password.', 'err');
+    return;
+  }
+
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/index.html'
+  });
+
+  if(error){
+    showMessage(error.message, 'err');
+    return;
+  }
+
+  showMessage('Password reset email sent.', 'ok');
+}
+
+// =========================================
+// SESSION CHECK
+// =========================================
+async function checkSession(){
+  const { data } = await client.auth.getSession();
+  if(data.session){
+    const role = localStorage.getItem('dn_role') || 'user';
+    if(role === 'admin'){
+      window.location.href = 'admin.html';
+    } else {
+      window.location.href = 'app.html';
+    }
+  }
+}
+
+function showMessage(text, type){
+  const msg = document.getElementById('msg');
+  msg.className = 'msg ' + type;
+  msg.textContent = text;
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter') login();
+});
+
+checkSession();
+</script>
+</body>
+</html>

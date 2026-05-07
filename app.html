@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Nudge - Front Office</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple:#6264a7; --purple-d:#4f52a0; --purple-l:#f0f0fb;
+  --green:#237b4b; --green-l:#f0faf4;
+  --amber:#c97d0a; --amber-l:#fff9f0;
+  --red:#c4314b; --red-l:#fdf3f5;
+  --blue:#0f6cbd; --blue-l:#f2f8fd;
+  --border:#e1dfdd; --bg:#f3f2f1; --surface:#fff;
+  --text:#242424; --muted:#616161; --faint:#999;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+
+/* ── TOPBAR ── */
+.topbar{height:48px;background:var(--purple);display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0}
+.tb-brand{display:flex;align-items:center;gap:9px;margin-right:18px}
+.tb-brand svg{width:17px;height:17px}
+.tb-brand-name{font-size:14px;font-weight:600;color:#fff;letter-spacing:-.01em}
+.tb-sep{width:1px;height:20px;background:rgba(255,255,255,.2);margin:0 14px}
+.tb-field{display:flex;align-items:center;gap:7px}
+.tb-lbl{font-size:11px;color:rgba(255,255,255,.7);white-space:nowrap}
+.tb-sel{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:5px;color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;padding:4px 22px 4px 8px;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='rgba(255,255,255,0.6)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center}
+.tb-sel option{background:#5558a0}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tb-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 13px;border-radius:5px;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;transition:background .15s}
+.tb-btn:hover{background:rgba(255,255,255,.22)}
+.tb-btn.primary{background:#fff;color:var(--purple);border-color:transparent;font-weight:600}
+.tb-btn.primary:hover{background:#f0f0fb}
+a.tb-btn{text-decoration:none;display:inline-flex;align-items:center}
+
+/* ── SHELL ── */
+.shell{display:flex;height:calc(100vh - 48px);overflow:hidden}
+
+/* ── LEFT PANEL ── */
+.left{width:236px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.ph{padding:13px 15px 11px;border-bottom:1px solid var(--border)}
+.ph-title{font-size:13px;font-weight:600}
+.ph-sub{font-size:11px;color:var(--faint);margin-top:2px}
+.inbox-form{padding:11px 13px;border-bottom:1px solid var(--border)}
+.inbox-ta{width:100%;border:1px solid #d1d1d1;border-radius:6px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12px;resize:none;min-height:68px;outline:none;line-height:1.5;color:var(--text);transition:border-color .15s}
+.inbox-ta:focus{border-color:var(--purple)}
+.inbox-ta::placeholder{color:#bbb;font-size:11px}
+.inbox-add{width:100%;margin-top:7px;padding:7px;background:var(--purple);color:#fff;border:none;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+.inbox-add:hover{background:var(--purple-d)}
+.inbox-scroll{flex:1;overflow-y:auto;padding:10px 12px}
+.inbox-lbl{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+.chip{display:flex;align-items:flex-start;gap:7px;background:#fafafa;border:1px solid #ebebeb;border-radius:6px;padding:8px 9px;margin-bottom:6px;font-size:12px;color:#444;line-height:1.4;cursor:grab;transition:box-shadow .12s}
+.chip:hover{box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.chip .grip{color:#ccc;font-size:10px;padding-top:1px;flex-shrink:0}
+.chip .ctxt{flex:1}
+.chip .del{color:#ddd;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0}
+.chip .del:hover{color:var(--red)}
+.inbox-empty{text-align:center;color:#ccc;font-size:11px;line-height:1.7;padding:14px 6px}
+
+/* ── SELF EVALUATION ── */
+.eval-block{border-top:1px solid var(--border);padding:13px 14px 14px;flex-shrink:0;background:#fafafa}
+.eval-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.eval-sub{font-size:10px;color:var(--faint);margin-bottom:10px}
+.eval-q{font-size:11px;color:var(--muted);margin-bottom:7px;line-height:1.4}
+.rating-row{display:flex;gap:3px;margin-bottom:10px}
+.rating-btn{flex:1;height:28px;border-radius:4px;border:1px solid var(--border);background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .12s;font-family:'DM Sans',sans-serif}
+.rating-btn:hover{border-color:var(--purple);color:var(--purple)}
+.rating-btn.selected{background:var(--purple);border-color:var(--purple);color:#fff}
+.rating-btn.selected.low{background:#c4314b;border-color:#c4314b}
+.rating-btn.selected.mid{background:var(--amber);border-color:var(--amber)}
+.rating-btn.selected.high{background:var(--green);border-color:var(--green)}
+.eval-note{width:100%;border:1px solid #d1d1d1;border-radius:5px;padding:6px 9px;font-family:'DM Sans',sans-serif;font-size:11px;resize:none;min-height:46px;outline:none;color:var(--text);line-height:1.45;margin-bottom:7px}
+.eval-note:focus{border-color:var(--purple)}
+.eval-note::placeholder{color:#bbb}
+.eval-submit{width:100%;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:5px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
+.eval-submit:hover{border-color:var(--purple);color:var(--purple)}
+.eval-saved{font-size:11px;color:var(--green);text-align:center;font-weight:600;display:none;padding:3px 0}
+
+/* ── MAIN KANBAN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.main-hd{padding:13px 17px 10px;display:flex;align-items:flex-end;justify-content:space-between;flex-shrink:0}
+.main-hd-title{font-size:15px;font-weight:600}
+.main-hd-sub{font-size:11px;color:var(--faint);margin-top:2px}
+.kanban{flex:1;display:flex;gap:10px;padding:0 17px 15px;overflow-x:auto;overflow-y:hidden}
+.kol{flex:1;min-width:155px;display:flex;flex-direction:column;background:var(--surface);border-radius:8px;border:1px solid var(--border);overflow:hidden}
+.kol-hd{padding:10px 13px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.kol-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kol-name{font-size:12px;font-weight:600}
+.kol-cnt{margin-left:auto;font-size:10px;font-weight:600;background:#f0f0f0;color:#888;border-radius:9px;padding:2px 7px}
+.kol-body{flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:60px;transition:background .12s}
+.kol-body.over{background:#f5f5fc}
+.drop-ghost{border:2px dashed #c8c8e8;border-radius:7px;height:40px;display:none;flex-shrink:0}
+.kol-body.over .drop-ghost{display:block}
+.kol-empty{text-align:center;color:#d0d0d0;font-size:11px;line-height:1.6;padding:14px 6px}
+
+.tcard{border-radius:7px;padding:10px 11px;border:1px solid transparent;cursor:grab;transition:box-shadow .12s,transform .1s;user-select:none}
+.tcard:hover{box-shadow:0 3px 10px rgba(0,0,0,.1);transform:translateY(-1px)}
+.tcard.dragging{opacity:.4;transform:scale(.97)}
+.tcard-txt{font-size:12px;font-weight:500;line-height:1.45}
+.tcard-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;margin-top:7px}
+.tcard-tip{font-size:11px;margin-top:5px;line-height:1.4;color:inherit;opacity:.8}
+
+.c-first{background:#f5f5fc;border-color:#ddddf0}.c-first .tcard-txt{color:#3a3c8a}.c-first .tcard-tag{background:#e0e0f5;color:#4f52a0}
+.c-later{background:#f4fbf7;border-color:#c0dfc8}.c-later .tcard-txt{color:#1a5c38}.c-later .tcard-tag{background:#c8ecd6;color:var(--green)}
+.c-watch{background:#fdf4f6;border-color:#f0c0cc}.c-watch .tcard-txt{color:#8b1c30}.c-watch .tcard-tag{background:#f9c8d0;color:var(--red)}
+.c-defer{background:#fffaf2;border-color:#f0d8a0}.c-defer .tcard-txt{color:#7a4c06}.c-defer .tcard-tag{background:#fde8a8;color:var(--amber)}
+
+.kol.kfirst .kol-hd{background:#f5f5fc}.kol.kfirst .kol-dot{background:var(--purple)}
+.kol.klater .kol-hd{background:#f4fbf7}.kol.klater .kol-dot{background:var(--green)}
+.kol.kwatch .kol-hd{background:#fdf4f6}.kol.kwatch .kol-dot{background:var(--red)}
+.kol.kdefer .kol-hd{background:#fffaf2}.kol.kdefer .kol-dot{background:var(--amber)}
+
+/* ── RIGHT NUDGE PANEL ── */
+.right{width:284px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rh{padding:13px 15px 11px;border-bottom:1px solid var(--border)}
+.rh-title{font-size:13px;font-weight:600}
+.rh-sub{font-size:11px;color:var(--faint);margin-top:2px}
+.nudge-scroll{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+
+.ncard{border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.ncard-hd{padding:10px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ncard-left{display:flex;align-items:center;gap:8px}
+.ncard-ico{font-size:14px}
+.ncard-title{font-size:13px;font-weight:600}
+.ncard-theory{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.07em;padding:2px 8px;border-radius:9px;white-space:nowrap;border:1px solid}
+
+.ncard-body{padding:10px 13px 12px}
+.ncard-sentence{font-size:13px;line-height:1.55;color:#333;margin-bottom:10px}
+.ncard-mets{display:flex;gap:6px}
+.met{flex:1;border:1px solid var(--border);border-radius:5px;padding:6px 8px}
+.met-v{font-size:13px;font-weight:700}
+.met-l{font-size:9px;color:var(--faint);margin-top:1px}
+
+/* nudge colour variants */
+.nk-i .ncard-hd{background:#f5f5fc}
+.nk-i .ncard-title{color:#4f52a0}
+.nk-i .ncard-theory{color:#4f52a0;background:#eeeef8;border-color:#d0d0ec}
+.nk-i .dot{background:var(--purple)}
+.nk-i .ncard-action{background:#f5f5fd;border-color:var(--purple);color:#3a3c8a}
+.nk-i .met-v{color:var(--purple)}
+
+.nk-w .ncard-hd{background:#fff4ed}
+.nk-w .ncard-title{color:#a0540a}
+.nk-w .ncard-theory{color:#a0540a;background:#fde8c8;border-color:#f0cc90}
+.nk-w .dot{background:var(--amber)}
+.nk-w .ncard-action{background:#fffbf4;border-color:var(--amber);color:#7a4c06}
+.nk-w .met-v{color:var(--amber)}
+
+.nk-p .ncard-hd{background:#f0faf4}
+.nk-p .ncard-title{color:var(--green)}
+.nk-p .ncard-theory{color:var(--green);background:#d4edd8;border-color:#aad6b4}
+.nk-p .dot{background:var(--green)}
+.nk-p .ncard-action{background:#f5fbf7;border-color:var(--green);color:#1a5c38}
+.nk-p .met-v{color:var(--green)}
+
+.nudge-empty{text-align:center;color:#ccc;font-size:12px;line-height:1.7;padding:28px 10px}
+.nudge-empty .ne-ico{font-size:26px;margin-bottom:10px}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <span class="tb-brand-name">Daily Nudge</span>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-field"><span class="tb-lbl">Role</span>
+    <select class="tb-sel" id="selRole">
+      <option>Relationship Manager</option><option>Risk Analyst</option>
+      <option>Compliance Officer</option><option>Operations Manager</option>
+      <option>Credit Analyst</option><option>Branch Manager</option>
+    </select>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-field"><span class="tb-lbl">Energy</span>
+    <select class="tb-sel" id="selEnergy">
+      <option>Energised</option><option>Getting through it</option>
+      <option>Tired</option><option>Stressed</option>
+    </select>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-field"><span class="tb-lbl">Peak hours</span>
+    <select class="tb-sel" id="selPeak">
+      <option>Morning person</option><option>Afternoon person</option>
+    </select>
+  </div>
+  <div class="tb-right">
+    <a class="tb-btn" href="admin.html">Admin Panel</a>
+    <button class="tb-btn" onclick="logout()">Logout</button>
+    <button class="tb-btn" onclick="loadExample()">Load example</button>
+    <button class="tb-btn primary" onclick="organise()">✦ Organise my day</button>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="ph"><div class="ph-title">Task inbox</div><div class="ph-sub">Add your tasks for today</div></div>
+    <div class="inbox-form">
+      <textarea class="inbox-ta" id="taInput" placeholder="Type a task, or paste a comma-separated list…"></textarea>
+      <button class="inbox-add" onclick="addTasks()">+ Add tasks</button>
+    </div>
+    <div class="inbox-scroll">
+      <div class="inbox-lbl">Unorganised</div>
+      <div id="inboxList"><div class="inbox-empty">Add tasks above,<br>then hit <strong>Organise my day</strong></div></div>
+    </div>
+
+    <!-- SELF EVALUATION -->
+    <div class="eval-block">
+      <div class="eval-title">End-of-day check-in</div>
+      <div class="eval-sub">Anonymous · visible to manager as trend only</div>
+      <div class="eval-q">How do you rate your performance today?</div>
+      <div class="rating-row" id="ratingRow">
+        <button class="rating-btn" onclick="setRating(1)">1</button>
+        <button class="rating-btn" onclick="setRating(2)">2</button>
+        <button class="rating-btn" onclick="setRating(3)">3</button>
+        <button class="rating-btn" onclick="setRating(4)">4</button>
+        <button class="rating-btn" onclick="setRating(5)">5</button>
+        <button class="rating-btn" onclick="setRating(6)">6</button>
+        <button class="rating-btn" onclick="setRating(7)">7</button>
+        <button class="rating-btn" onclick="setRating(8)">8</button>
+        <button class="rating-btn" onclick="setRating(9)">9</button>
+        <button class="rating-btn" onclick="setRating(10)">10</button>
+      </div>
+      <textarea class="eval-note" id="evalNote" placeholder="Anything blocking you? (optional)"></textarea>
+      <button class="eval-submit" onclick="submitEval()">Submit check-in</button>
+      <div class="eval-saved" id="evalSaved">✓ Submitted — thank you</div>
+    </div>
+  </div>
+
+  <!-- MAIN KANBAN -->
+  <div class="main">
+    <div class="main-hd">
+      <div><div class="main-hd-title">Today's schedule</div><div class="main-hd-sub" id="mainSub">Add tasks and click Organise my day to get started</div></div>
+    </div>
+    <div class="kanban">
+      <div class="kol kfirst">
+        <div class="kol-hd"><div class="kol-dot"></div><span class="kol-name">Do first</span><span class="kol-cnt" id="cnt-first">0</span></div>
+        <div class="kol-body" id="col-first"><div class="drop-ghost"></div><div class="kol-empty">High-priority tasks</div></div>
+      </div>
+      <div class="kol klater">
+        <div class="kol-hd"><div class="kol-dot"></div><span class="kol-name">Do later</span><span class="kol-cnt" id="cnt-later">0</span></div>
+        <div class="kol-body" id="col-later"><div class="drop-ghost"></div><div class="kol-empty">Lower-priority tasks</div></div>
+      </div>
+      <div class="kol kwatch">
+        <div class="kol-hd"><div class="kol-dot"></div><span class="kol-name">Watch out</span><span class="kol-cnt" id="cnt-watch">0</span></div>
+        <div class="kol-body" id="col-watch"><div class="drop-ghost"></div><div class="kol-empty">Tasks you may avoid</div></div>
+      </div>
+      <div class="kol kdefer">
+        <div class="kol-hd"><div class="kol-dot"></div><span class="kol-name">Defer</span><span class="kol-cnt" id="cnt-defer">0</span></div>
+        <div class="kol-body" id="col-defer"><div class="drop-ghost"></div><div class="kol-empty">Push to tomorrow</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT NUDGES -->
+  <div class="right">
+    <div class="rh"><div class="rh-title">Behavioural nudges</div><div class="rh-sub">3 high-impact interventions for today</div></div>
+    <div class="nudge-scroll" id="nudgeList">
+      <div class="nudge-empty"><div class="ne-ico">✦</div>Organise your day<br>to receive nudges</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// AUTH / SUPABASE
+// ─────────────────────────────────────────────
+const SUPABASE_URL = 'https://xfttnkfefnhszirxygcn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_NHSpKeGFRUp99Y3em-d0kA_2BaI5PrH';
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function checkAuth(){
+  const { data } = await client.auth.getSession();
+  if(!data.session){
+    window.location.href = 'index.html';
+  }
+}
+
+async function logout(){
+  await client.auth.signOut();
+  localStorage.removeItem('dn_role');
+  window.location.href = 'index.html';
+}
+
+var tasks=[], dragId=null, selectedRating=0;
+
+var EX=[
+  "Finish credit memo for Müller AG — been putting it off since last week",
+  "Write up model validation findings",
+  "Reply to emails from Zurich office",
+  "Attend 2pm risk committee — probably don't need to be there",
+  "Review junior analyst work before EOD",
+  "Update training log before Friday HR deadline",
+  "Chase compliance about overdue policy sign-off"
+];
+
+var NORMS={
+  "Relationship Manager":"8 out of 10 top-performing RMs in your role log client notes before their next meeting — not at end of week.",
+  "Risk Analyst":"Analysts who finish model reviews before noon catch 30% more material errors than those who complete them later.",
+  "Compliance Officer":"High-performing compliance officers sign off documents within 24 hours of receipt — not weeks later.",
+  "Operations Manager":"Top operations managers resolve flagged issues within 4 hours — delays create workarounds that compound.",
+  "Credit Analyst":"The highest-performing credit analysts submit memos 1.4 days before deadline on average, not the morning of.",
+  "Branch Manager":"Branch managers who review pipeline data every morning consistently outperform those who do it weekly."
+};
+
+function uid(){return Math.random().toString(36).slice(2,8);}
+function sh(s,n){n=n||38;return s&&s.length>n?s.slice(0,n)+'…':s;}
+
+function setRating(n){
+  selectedRating=n;
+  document.querySelectorAll('.rating-btn').forEach(function(b,i){
+    b.className='rating-btn';
+    if(i+1===n){
+      if(n<=3) b.className='rating-btn selected low';
+      else if(n<=6) b.className='rating-btn selected mid';
+      else b.className='rating-btn selected high';
+    }
+  });
+}
+
+function submitEval(){
+  if(!selectedRating){alert('Please select a rating first.');return;}
+  document.getElementById('evalSaved').style.display='block';
+  document.getElementById('evalNote').value='';
+  setTimeout(function(){document.getElementById('evalSaved').style.display='none';},3000);
+}
+
+function addTasks(){
+  var raw=document.getElementById('taInput').value.trim();
+  if(!raw)return;
+  raw.split(/[,\n]/).map(s=>s.trim()).filter(s=>s.length>4).forEach(function(t){
+    tasks.push({id:uid(),text:t.replace(/^[-•*\d.]\s*/,''),col:'inbox'});
+  });
+  document.getElementById('taInput').value='';
+  renderInbox();
+}
+
+function loadExample(){
+  tasks=[];
+  EX.forEach(function(t){tasks.push({id:uid(),text:t,col:'inbox'});});
+  renderInbox(); clearCols();
+  document.getElementById('nudgeList').innerHTML='<div class="nudge-empty"><div class="ne-ico">✦</div>Click <strong>Organise my day</strong><br>to receive your nudges</div>';
+  document.getElementById('mainSub').textContent='Add tasks and click Organise my day to get started';
+}
+
+function removeTask(id){tasks=tasks.filter(t=>t.id!==id);renderInbox();}
+
+function renderInbox(){
+  var inbox=tasks.filter(t=>t.col==='inbox');
+  var el=document.getElementById('inboxList');
+  if(!inbox.length){el.innerHTML='<div class="inbox-empty">All tasks organised ✓</div>';return;}
+  el.innerHTML=inbox.map(t=>`<div class="chip" draggable="true" data-id="${t.id}" ondragstart="dStart(event,'${t.id}')"><span class="grip">⠿</span><span class="ctxt">${t.text}</span><span class="del" onclick="removeTask('${t.id}')">×</span></div>`).join('');
+}
+
+function clearCols(){
+  ['first','later','watch','defer'].forEach(function(c){
+    document.getElementById('col-'+c).querySelectorAll('.tcard').forEach(n=>n.remove());
+    document.getElementById('cnt-'+c).textContent='0';
+  });
+}
+
+var HW=['memo','report','review','analysis','valid','model','propos','write','draft','prepar','complian','credit','risk','pitch','present'];
+var AW=['email','inbox','reply','crm','chase','call back','paper','sign off','clear','update'];
+var MW=['meeting','committee','sync'];
+var VW=['avoid','putting off',"haven't done","haven't start","still haven",'difficult','dread'];
+
+function classify(t){
+  var txt=t.text.toLowerCase();
+  if(VW.some(w=>txt.includes(w)))return 'avoid';
+  if(HW.some(w=>txt.includes(w)))return 'hard';
+  if(MW.some(w=>txt.includes(w)))return 'meet';
+  if(AW.some(w=>txt.includes(w)))return 'admin';
+  return 'other';
+}
+
+function makeCard(t,col){
+  var card=document.createElement('div');
+  card.className='tcard c-'+col;
+  card.draggable=true; card.dataset.id=t.id;
+  var tags={first:'Peak energy',later:'Do later',watch:'⚠ Avoidance risk',defer:'Defer'};
+  var tips={first:'Your best thinking — use it here.',later:'Lower stakes — fits low-energy periods.',watch:'Open this first. Write one sentence.',defer:'Not today. Schedule or delegate.'};
+  card.innerHTML=`<div class="tcard-txt">${t.text}</div><span class="tcard-tag">${tags[col]}</span><div class="tcard-tip">${tips[col]}</div>`;
+  card.addEventListener('dragstart',function(e){dStart(e,t.id);});
+  return card;
+}
+
+function addToCol(ts,col){
+  var el=document.getElementById('col-'+col);
+  ts.forEach(function(t){t.col=col;el.appendChild(makeCard(t,col));});
+  document.getElementById('cnt-'+col).textContent=el.querySelectorAll('.tcard').length;
+}
+
+function organise(){
+  var inbox=tasks.filter(t=>t.col==='inbox');
+  if(!inbox.length){alert('Add some tasks first.');return;}
+
+  var role=document.getElementById('selRole').value;
+  var energy=document.getElementById('selEnergy').value;
+  var morning=document.getElementById('selPeak').value==='Morning person';
+
+  var avoid=[],hard=[],meet=[],admin=[],other=[];
+  inbox.forEach(function(t){
+    var c=classify(t);
+    if(c==='avoid')avoid.push(t);
+    else if(c==='hard')hard.push(t);
+    else if(c==='meet')meet.push(t);
+    else if(c==='admin')admin.push(t);
+    else other.push(t);
+  });
+  if(!avoid.length&&inbox.length)avoid.push(inbox[inbox.length-1]);
+
+  var first=morning?hard.slice(0,2):admin.slice(0,2);
+  var later=morning?admin.concat(other).slice(0,3):hard.slice(0,2).concat(other.slice(0,1));
+  var watch=avoid.slice(0,2);
+  var defer=meet.concat(morning?hard.slice(2):hard.slice(2)).concat(other.slice(3));
+  var assigned=new Set([...first,...later,...watch,...defer].map(t=>t.id));
+  inbox.filter(t=>!assigned.has(t.id)).forEach(t=>defer.push(t));
+
+  clearCols();
+  addToCol(first,'first'); addToCol(later,'later');
+  addToCol(watch,'watch'); addToCol(defer,'defer');
+  tasks.forEach(t=>{if(t.col==='inbox')t.col='defer';});
+  renderInbox();
+  document.getElementById('mainSub').textContent=inbox.length+' tasks organised · drag to adjust';
+
+  var avoidName=sh(avoid[0]?avoid[0].text:'this task',34);
+  var hardName=sh(first[0]?first[0].text:'your hardest task',32);
+  var norm=NORMS[role]||NORMS['Risk Analyst'];
+  var peakWord=energy==='Energised'?'right now':'in your next focused block';
+  var total=inbox.length;
+
+  var nudges=[
+    {
+      k:'i', ico:'🎯', title:'Set a when-then plan',
+      theory:'Gollwitzer (1999)',
+      sentence:'Write down exactly when and how you will start "'+hardName+'" — people with a specific plan are 2–3× more likely to follow through.',
+      m1:'2–3×', ml1:'Follow-through rate', m2:'d=0.65', ml2:'Effect size, 94 studies'
+    },
+    {
+      k:'w', ico:'🔦', title:'Name the obstacle',
+      theory:'Oettingen — WOOP (2014)',
+      sentence:'Before starting "'+avoidName+'", identify the one thing that will stop you — then decide in advance what you will do when that happens.',
+      m1:'+28%', ml1:'vs positive thinking alone', m2:'#1', ml2:'Anti-avoidance technique'
+    },
+    {
+      k:'p', ico:'👥', title:'Follow your peers',
+      theory:'Cialdini (1984)',
+      sentence:norm,
+      m1:'3–4×', ml1:'Norm vs instruction', m2:total, ml2:'Tasks today'
+    }
+  ];
+
+  document.getElementById('nudgeList').innerHTML=nudges.map(n=>`
+    <div class="ncard nk-${n.k}">
+      <div class="ncard-hd">
+        <div class="ncard-left"><span class="ncard-ico">${n.ico}</span><span class="ncard-title">${n.title}</span></div>
+        <span class="ncard-theory">${n.theory}</span>
+      </div>
+      <div class="ncard-body">
+        <div class="ncard-sentence">${n.sentence}</div>
+        <div class="ncard-mets">
+          <div class="met"><div class="met-v">${n.m1}</div><div class="met-l">${n.ml1}</div></div>
+          <div class="met"><div class="met-v">${n.m2}</div><div class="met-l">${n.ml2}</div></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// drag & drop
+function dStart(e,id){
+  dragId=id; e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{var el=document.querySelector('[data-id="'+id+'"]');if(el)el.classList.add('dragging');},0);
+}
+['first','later','watch','defer'].forEach(function(col){
+  var el=document.getElementById('col-'+col);
+  el.addEventListener('dragover',function(e){e.preventDefault();el.classList.add('over');});
+  el.addEventListener('dragleave',function(e){if(!el.contains(e.relatedTarget))el.classList.remove('over');});
+  el.addEventListener('drop',function(e){
+    e.preventDefault(); el.classList.remove('over');
+    if(!dragId)return;
+    var task=tasks.find(t=>t.id===dragId);
+    if(!task)return;
+    var old=document.querySelector('.tcard[data-id="'+dragId+'"]');
+    if(old)old.remove();
+    task.col=col; el.appendChild(makeCard(task,col));
+    ['first','later','watch','defer'].forEach(function(c){
+      document.getElementById('cnt-'+c).textContent=document.querySelectorAll('#col-'+c+' .tcard').length;
+    });
+    renderInbox(); dragId=null;
+  });
+});
+document.addEventListener('dragend',function(){
+  document.querySelectorAll('.tcard.dragging').forEach(el=>el.classList.remove('dragging'));
+  document.querySelectorAll('.kol-body.over').forEach(el=>el.classList.remove('over'));
+  dragId=null;
+});
+document.getElementById('taInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addTasks();}
+});
+
+checkAuth();
+</script>
+</body>
+</html>

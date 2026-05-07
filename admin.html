@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Nudge Admin</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+@font-face {
+  font-family: 'Aptos';
+  src: local('Aptos'), local('Aptos-Regular');
+}
+
+:root{
+  --teams:#6264a7;
+  --teams-dark:#4f52a0;
+  --teams-light:#f0f0fb;
+  --blue:#0f6cbd;
+  --blue-light:#f2f8fd;
+  --green:#237b4b;
+  --green-light:#f0faf4;
+  --amber:#c97d0a;
+  --amber-light:#fff9f0;
+  --red:#c4314b;
+  --red-light:#fdf3f5;
+  --bg:#f3f2f1;
+  --surface:#ffffff;
+  --surface-2:#faf9f8;
+  --border:#e1dfdd;
+  --border-2:#d1d1d1;
+  --text:#242424;
+  --muted:#616161;
+  --faint:#8a8886;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --shadow-soft:0 8px 28px rgba(0,0,0,.08);
+  --radius:10px;
+  --radius-sm:6px;
+  --ease:.16s cubic-bezier(.4,0,.2,1);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:'Aptos','Segoe UI',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  font-size:13px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+button,input,select,textarea{font-family:inherit}
+a{text-decoration:none;color:inherit}
+
+/* TOP BAR */
+.topbar{
+  height:50px;
+  background:var(--teams);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 18px;
+  box-shadow:0 1px 0 rgba(0,0,0,.08);
+  position:sticky;
+  top:0;
+  z-index:50;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:700;
+  font-size:15px;
+}
+
+.brand-icon{
+  width:26px;
+  height:26px;
+  border-radius:7px;
+  background:rgba(255,255,255,.16);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  border:1px solid rgba(255,255,255,.18);
+}
+
+.top-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.secure-pill{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:12px;
+  color:rgba(255,255,255,.86);
+}
+
+.secure-dot{
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:#4db888;
+  box-shadow:0 0 0 3px rgba(77,184,136,.18);
+}
+
+.top-btn{
+  height:30px;
+  padding:0 12px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.28);
+  background:rgba(255,255,255,.12);
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:var(--ease);
+}
+
+.top-btn:hover{background:rgba(255,255,255,.22)}
+
+/* LAYOUT */
+.app{
+  display:grid;
+  grid-template-columns:232px 1fr;
+  min-height:calc(100vh - 50px);
+}
+
+.sidebar{
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  padding:18px 12px;
+}
+
+.nav-label{
+  font-size:10px;
+  font-weight:700;
+  color:var(--faint);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  padding:0 10px 10px;
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.nav-btn{
+  width:100%;
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 11px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  text-align:left;
+  transition:var(--ease);
+}
+
+.nav-btn:hover{
+  background:var(--surface-2);
+  color:var(--text);
+}
+
+.nav-btn.active{
+  background:var(--teams-light);
+  color:var(--teams-dark);
+  border-color:#d8d8f2;
+}
+
+.privacy-box{
+  margin-top:18px;
+  padding:14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--surface-2);
+  color:var(--muted);
+  font-size:12px;
+}
+
+.privacy-box strong{
+  display:block;
+  color:var(--text);
+  margin-bottom:5px;
+}
+
+/* MAIN */
+.main{
+  padding:22px;
+  overflow:auto;
+}
+
+.page-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:16px;
+}
+
+.page-title{
+  font-size:24px;
+  font-weight:800;
+  letter-spacing:-.03em;
+  margin-bottom:4px;
+}
+
+.page-sub{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.date-pill{
+  padding:8px 12px;
+  border-radius:999px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-size:12px;
+  font-weight:600;
+}
+
+/* CARDS */
+.metric-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:14px;
+}
+
+.metric{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+
+.metric-label{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--faint);
+}
+
+.metric-icon{
+  width:24px;
+  height:24px;
+  border-radius:7px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+}
+
+.metric-value{
+  font-size:30px;
+  font-weight:800;
+  letter-spacing:-.04em;
+  margin-top:10px;
+}
+
+.metric-note{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:3px;
+}
+
+.metric.completed .metric-icon{background:var(--green-light);color:var(--green)}
+.metric.deferred .metric-icon{background:var(--amber-light);color:var(--amber)}
+.metric.satisfaction .metric-icon{background:var(--teams-light);color:var(--teams-dark)}
+.metric.risk .metric-icon{background:var(--red-light);color:var(--red)}
+
+.panel-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:14px;
+}
+
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.panel.wide{grid-column:1/-1}
+
+.panel-head{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.panel-title{
+  font-size:13px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  color:var(--text);
+}
+
+.panel-sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+.panel-body{
+  padding:16px;
+}
+
+/* CHARTS */
+.chart-wrap{
+  height:250px;
+  position:relative;
+}
+
+.chart-title-line{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.chart-stat{
+  font-size:12px;
+  font-weight:700;
+  color:var(--teams-dark);
+  background:var(--teams-light);
+  border:1px solid #d8d8f2;
+  border-radius:999px;
+  padding:4px 9px;
+}
+
+svg.chart{
+  width:100%;
+  height:210px;
+  display:block;
+}
+
+.axis{
+  stroke:#d8d8d8;
+  stroke-width:1;
+}
+
+.grid-line{
+  stroke:#eeeeee;
+  stroke-width:1;
+}
+
+.line-completed{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.line-deferred{fill:none;stroke:var(--amber);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.line-satisfaction{fill:none;stroke:var(--teams-dark);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.dot-completed{fill:var(--green)}
+.dot-deferred{fill:var(--amber)}
+.dot-satisfaction{fill:var(--teams-dark)}
+.axis-label{font-size:11px;fill:var(--faint)}
+.value-label{font-size:11px;fill:var(--muted);font-weight:700}
+
+/* OVERVIEW */
+.overview-grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:14px;
+}
+
+.status-list{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.status-row{
+  display:grid;
+  grid-template-columns:110px 1fr 42px;
+  gap:12px;
+  align-items:center;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.status-row:last-child{border-bottom:none}
+
+.status-name{
+  font-weight:700;
+  color:var(--text);
+  font-size:13px;
+}
+
+.bar-track{
+  height:9px;
+  background:#f0f0f0;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.bar-fill{
+  height:100%;
+  border-radius:999px;
+}
+
+.bar-completed{background:var(--green)}
+.bar-progress{background:var(--blue)}
+.bar-deferred{background:var(--amber)}
+.bar-new{background:var(--teams)}
+.bar-flagged{background:var(--red)}
+
+.status-value{
+  text-align:right;
+  font-weight:800;
+  color:var(--text);
+}
+
+.category-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.category-card{
+  padding:13px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface-2);
+}
+
+.category-num{
+  font-size:24px;
+  font-weight:800;
+  color:var(--teams-dark);
+}
+
+.category-label{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+/* TABLE-LIKE AGGREGATE VIEW */
+.aggregate-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.aggregate-table th{
+  text-align:left;
+  color:var(--faint);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:10px;
+  border-bottom:1px solid var(--border);
+}
+
+.aggregate-table td{
+  padding:12px 10px;
+  border-bottom:1px solid var(--border);
+  color:var(--muted);
+}
+
+.aggregate-table tr:last-child td{border-bottom:none}
+
+.aggregate-table strong{color:var(--text)}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+.pill.green{background:var(--green-light);color:var(--green)}
+.pill.amber{background:var(--amber-light);color:var(--amber)}
+.pill.red{background:var(--red-light);color:var(--red)}
+.pill.blue{background:var(--blue-light);color:var(--blue)}
+.pill.purple{background:var(--teams-light);color:var(--teams-dark)}
+
+/* NUDGES */
+.nudge-list{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+
+.nudge-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+  padding:15px;
+  box-shadow:var(--shadow);
+}
+
+.nudge-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.nudge-title{
+  font-size:14px;
+  font-weight:800;
+}
+
+.nudge-body{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+
+.toggle{
+  position:relative;
+  width:38px;
+  height:22px;
+  border-radius:999px;
+  background:#d1d1d1;
+  border:none;
+  cursor:pointer;
+  transition:var(--ease);
+  flex-shrink:0;
+}
+
+.toggle::after{
+  content:'';
+  position:absolute;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#fff;
+  top:2px;
+  left:2px;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+  transition:var(--ease);
+}
+
+.toggle.on{background:var(--teams)}
+.toggle.on::after{transform:translateX(16px)}
+
+/* CONTENT VISIBILITY */
+.view{display:none}
+.view.active{display:block}
+
+/* TOAST */
+.toast{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-left:4px solid var(--teams);
+  border-radius:10px;
+  box-shadow:var(--shadow-soft);
+  padding:12px 14px;
+  max-width:320px;
+  color:var(--muted);
+  font-size:12px;
+  z-index:999;
+  animation:toastIn .25s ease;
+}
+
+.toast strong{
+  display:block;
+  color:var(--text);
+  margin-bottom:2px;
+}
+
+@keyframes toastIn{
+  from{opacity:0;transform:translateX(24px)}
+  to{opacity:1;transform:translateX(0)}
+}
+
+@media(max-width:1050px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .metric-grid{grid-template-columns:repeat(2,1fr)}
+  .panel-grid,.overview-grid{grid-template-columns:1fr}
+  .nudge-list{grid-template-columns:1fr}
+}
+
+@media(max-width:680px){
+  .main{padding:14px}
+  .metric-grid{grid-template-columns:1fr}
+  .page-head{flex-direction:column;align-items:flex-start}
+  .topbar{padding:0 12px}
+  .secure-pill{display:none}
+}
+</style>
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-icon">▦</div>
+    <span>Daily Nudge Admin</span>
+  </div>
+  <div class="top-right">
+    <div class="secure-pill"><span class="secure-dot"></span> Secure manager workspace</div>
+    <button class="top-btn" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="nav-label">Manager view</div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showView('dashboard', this)">▦ Dashboard</button>
+      <button class="nav-btn" onclick="showView('overview', this)">✓ Task overview</button>
+      <button class="nav-btn" onclick="showView('nudges', this)">✦ Nudges</button>
+      <button class="nav-btn" onclick="showView('privacy', this)">🔒 Privacy</button>
+    </div>
+
+    <div class="privacy-box">
+      <strong>Anonymous by design</strong>
+      Managers see aggregate patterns only. Individual employees, task names and personal check-ins are hidden.
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Team dashboard</h1>
+          <p class="page-sub">Aggregated task flow and wellbeing trends. No individual employee or task data is visible.</p>
+        </div>
+        <div class="date-pill" id="today">—</div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric completed">
+          <div class="metric-label">Completed this week <span class="metric-icon">✓</span></div>
+          <div class="metric-value" id="mCompleted">—</div>
+          <div class="metric-note">Total completed tasks across all users</div>
+        </div>
+
+        <div class="metric deferred">
+          <div class="metric-label">Deferred this week <span class="metric-icon">↷</span></div>
+          <div class="metric-value" id="mDeferred">—</div>
+          <div class="metric-note">Total tasks pushed to later/tomorrow</div>
+        </div>
+
+        <div class="metric satisfaction">
+          <div class="metric-label">Avg satisfaction <span class="metric-icon">★</span></div>
+          <div class="metric-value" id="mSatisfaction">—</div>
+          <div class="metric-note">Anonymous end-of-day reflection score</div>
+        </div>
+
+        <div class="metric risk">
+          <div class="metric-label">Risk signals <span class="metric-icon">!</span></div>
+          <div class="metric-value" id="mRisk">—</div>
+          <div class="metric-note">Deferral and overload warning indicators</div>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Completed tasks trend</div>
+              <div class="panel-sub">Daily total number of completed tasks</div>
+            </div>
+            <span class="chart-stat" id="completedTrend">—</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <svg class="chart" id="chartCompleted"></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Deferred tasks trend</div>
+              <div class="panel-sub">Daily total number of deferred tasks</div>
+            </div>
+            <span class="chart-stat" id="deferredTrend">—</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <svg class="chart" id="chartDeferred"></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel wide">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Employee satisfaction trend</div>
+              <div class="panel-sub">Average anonymous end-of-day satisfaction score by weekday</div>
+            </div>
+            <span class="chart-stat" id="satisfactionTrend">—</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <svg class="chart" id="chartSatisfaction"></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OVERVIEW -->
+    <section id="view-overview" class="view">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">General task overview</h1>
+          <p class="page-sub">Workload distribution without employee names or task descriptions.</p>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Current status mix</div>
+              <div class="panel-sub">Aggregated task statuses today</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="status-list" id="statusList"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Task categories</div>
+              <div class="panel-sub">General type of work, not individual tasks</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="category-grid" id="categoryGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Weekly aggregate table</div>
+            <div class="panel-sub">Daily totals only. No individual employee records.</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table class="aggregate-table">
+            <thead>
+              <tr>
+                <th>Weekday</th>
+                <th>Completed</th>
+                <th>Deferred</th>
+                <th>Avg satisfaction</th>
+                <th>Main signal</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- NUDGES -->
+    <section id="view-nudges" class="view">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Nudge management</h1>
+          <p class="page-sub">Enable or disable general behavioural interventions. No individual targeting is shown to managers.</p>
+        </div>
+      </div>
+
+      <div class="nudge-list" id="nudgeList"></div>
+    </section>
+
+    <!-- PRIVACY -->
+    <section id="view-privacy" class="view">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Privacy model</h1>
+          <p class="page-sub">This back-office view is intentionally aggregate-only.</p>
+        </div>
+      </div>
+
+      <div class="panel wide">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">What managers can and cannot see</div>
+            <div class="panel-sub">Designed for trust-preserving workforce analytics</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table class="aggregate-table">
+            <thead>
+              <tr>
+                <th>Visible to manager</th>
+                <th>Hidden from manager</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Daily number of completed tasks</strong></td>
+                <td>Individual employee names</td>
+              </tr>
+              <tr>
+                <td><strong>Daily number of deferred tasks</strong></td>
+                <td>Concrete task descriptions</td>
+              </tr>
+              <tr>
+                <td><strong>Average satisfaction score</strong></td>
+                <td>Personal mood check-in details</td>
+              </tr>
+              <tr>
+                <td><strong>Aggregate risk signals</strong></td>
+                <td>Search or filtering by person</td>
+              </tr>
+              <tr>
+                <td><strong>Nudge effectiveness trends</strong></td>
+                <td>Individual performance surveillance</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xfttnkfefnhszirxygcn.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_NHSpKeGFRUp99Y3em-d0kA_2BaI5PrH';
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const weeklyData = [
+  { day:'Mon', completed:24, deferred:9, satisfaction:4.1 },
+  { day:'Tue', completed:31, deferred:7, satisfaction:4.3 },
+  { day:'Wed', completed:28, deferred:11, satisfaction:3.9 },
+  { day:'Thu', completed:36, deferred:6, satisfaction:4.4 },
+  { day:'Fri', completed:22, deferred:14, satisfaction:3.7 }
+];
+
+const statusData = [
+  { name:'Completed', value:36, cls:'bar-completed', pill:'green' },
+  { name:'In progress', value:18, cls:'bar-progress', pill:'blue' },
+  { name:'Deferred', value:14, cls:'bar-deferred', pill:'amber' },
+  { name:'New', value:11, cls:'bar-new', pill:'purple' },
+  { name:'Flagged', value:5, cls:'bar-flagged', pill:'red' }
+];
+
+const categoryData = [
+  { label:'Deep work', value:21 },
+  { label:'Admin work', value:18 },
+  { label:'Client work', value:15 },
+  { label:'Control tasks', value:13 },
+  { label:'Meetings', value:9 },
+  { label:'Reporting', value:8 }
+];
+
+const nudges = [
+  { title:'Smart task order', theory:'Decision fatigue', body:'Encourage users to start with cognitively demanding work during their highest-energy period.', active:true },
+  { title:'Implementation intention', theory:'When-then planning', body:'Ask users to define when and how they will start a task to increase follow-through.', active:true },
+  { title:'Anti-avoidance prompt', theory:'Present bias', body:'Reduce avoidance by prompting users to take one small first action immediately.', active:true },
+  { title:'Loss framing', theory:'Loss aversion', body:'Frame delay as an active cost, especially when critical work is repeatedly deferred.', active:false },
+  { title:'Social norm reminder', theory:'Social proof', body:'Use non-personal team norms to show what effective task sequencing looks like.', active:true },
+  { title:'Recovery reminder', theory:'Wellbeing protection', body:'Encourage short breaks when workload pressure and deferrals rise together.', active:true }
+];
+
+function showView(id, btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function sum(key){
+  return weeklyData.reduce((a,b)=>a+b[key],0);
+}
+
+function avg(key){
+  return weeklyData.reduce((a,b)=>a+b[key],0)/weeklyData.length;
+}
+
+function renderMetrics(){
+  const completed = sum('completed');
+  const deferred = sum('deferred');
+  const sat = avg('satisfaction');
+  const risk = weeklyData.filter(d=>d.deferred >= 10 || d.satisfaction < 4).length;
+
+  document.getElementById('mCompleted').textContent = completed;
+  document.getElementById('mDeferred').textContent = deferred;
+  document.getElementById('mSatisfaction').textContent = sat.toFixed(1) + '/5';
+  document.getElementById('mRisk').textContent = risk;
+
+  document.getElementById('completedTrend').textContent = '+50% vs Mon';
+  document.getElementById('deferredTrend').textContent = 'Friday highest';
+  document.getElementById('satisfactionTrend').textContent = 'Avg ' + sat.toFixed(1) + '/5';
+}
+
+function drawLineChart(svgId, dataKey, lineClass, dotClass, suffix=''){
+  const svg = document.getElementById(svgId);
+  svg.innerHTML = '';
+
+  const w = svg.clientWidth || 600;
+  const h = 210;
+  const pad = {l:36,r:22,t:18,b:32};
+  const innerW = w - pad.l - pad.r;
+  const innerH = h - pad.t - pad.b;
+
+  const values = weeklyData.map(d=>d[dataKey]);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+
+  if(dataKey !== 'satisfaction'){
+    min = 0;
+    max = Math.ceil(max * 1.15);
+  } else {
+    min = 3;
+    max = 5;
+  }
+
+  const x = i => pad.l + (innerW/(weeklyData.length-1))*i;
+  const y = v => pad.t + innerH - ((v-min)/(max-min))*innerH;
+
+  for(let i=0;i<=4;i++){
+    const gy = pad.t + innerH/4*i;
+    svg.insertAdjacentHTML('beforeend', `<line class="grid-line" x1="${pad.l}" y1="${gy}" x2="${w-pad.r}" y2="${gy}"></line>`);
+  }
+
+  svg.insertAdjacentHTML('beforeend', `<line class="axis" x1="${pad.l}" y1="${pad.t+innerH}" x2="${w-pad.r}" y2="${pad.t+innerH}"></line>`);
+  svg.insertAdjacentHTML('beforeend', `<line class="axis" x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t+innerH}"></line>`);
+
+  const points = weeklyData.map((d,i)=>`${x(i)},${y(d[dataKey])}`).join(' ');
+  svg.insertAdjacentHTML('beforeend', `<polyline class="${lineClass}" points="${points}"></polyline>`);
+
+  weeklyData.forEach((d,i)=>{
+    const cx = x(i);
+    const cy = y(d[dataKey]);
+    const label = d[dataKey] + suffix;
+
+    svg.insertAdjacentHTML('beforeend', `<circle class="${dotClass}" cx="${cx}" cy="${cy}" r="4"></circle>`);
+    svg.insertAdjacentHTML('beforeend', `<text class="value-label" x="${cx}" y="${cy-10}" text-anchor="middle">${label}</text>`);
+    svg.insertAdjacentHTML('beforeend', `<text class="axis-label" x="${cx}" y="${h-10}" text-anchor="middle">${d.day}</text>`);
+  });
+}
+
+function renderStatus(){
+  const max = Math.max(...statusData.map(s=>s.value));
+  document.getElementById('statusList').innerHTML = statusData.map(s=>`
+    <div class="status-row">
+      <div class="status-name">${s.name}</div>
+      <div class="bar-track"><div class="bar-fill ${s.cls}" style="width:${(s.value/max)*100}%"></div></div>
+      <div class="status-value">${s.value}</div>
+    </div>
+  `).join('');
+}
+
+function renderCategories(){
+  document.getElementById('categoryGrid').innerHTML = categoryData.map(c=>`
+    <div class="category-card">
+      <div class="category-num">${c.value}</div>
+      <div class="category-label">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+function renderWeeklyRows(){
+  document.getElementById('weeklyRows').innerHTML = weeklyData.map(d=>{
+    let signal = '<span class="pill green">Stable</span>';
+    if(d.deferred >= 12) signal = '<span class="pill amber">Deferral pressure</span>';
+    if(d.satisfaction < 4) signal = '<span class="pill red">Lower satisfaction</span>';
+
+    return `
+      <tr>
+        <td><strong>${d.day}</strong></td>
+        <td>${d.completed}</td>
+        <td>${d.deferred}</td>
+        <td>${d.satisfaction.toFixed(1)}/5</td>
+        <td>${signal}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderNudges(){
+  document.getElementById('nudgeList').innerHTML = nudges.map((n,i)=>`
+    <div class="nudge-card">
+      <div class="nudge-head">
+        <div>
+          <div class="nudge-title">${n.title}</div>
+          <span class="pill purple">${n.theory}</span>
+        </div>
+        <button class="toggle ${n.active?'on':''}" onclick="toggleNudge(${i}, this)" aria-label="Toggle nudge"></button>
+      </div>
+      <div class="nudge-body">${n.body}</div>
+    </div>
+  `).join('');
+}
+
+function toggleNudge(i, btn){
+  nudges[i].active = !nudges[i].active;
+  btn.classList.toggle('on', nudges[i].active);
+  toast('Nudge setting updated', nudges[i].title + ' is now ' + (nudges[i].active ? 'active.' : 'inactive.'));
+}
+
+function toast(title, body){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<strong>${title}</strong>${body}`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2600);
+}
+
+async function logout(){
+  try{
+    await client.auth.signOut();
+  }catch(e){}
+  localStorage.removeItem('dn_role');
+  window.location.href = 'index.html';
+}
+
+async function checkSession(){
+  const { data } = await client.auth.getSession();
+  if(!data.session){
+    window.location.href = 'index.html';
+  }
+}
+
+function renderAll(){
+  document.getElementById('today').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  renderMetrics();
+  drawLineChart('chartCompleted', 'completed', 'line-completed', 'dot-completed');
+  drawLineChart('chartDeferred', 'deferred', 'line-deferred', 'dot-deferred');
+  drawLineChart('chartSatisfaction', 'satisfaction', 'line-satisfaction', 'dot-satisfaction', '/5');
+  renderStatus();
+  renderCategories();
+  renderWeeklyRows();
+  renderNudges();
+}
+
+window.addEventListener('resize', () => {
+  drawLineChart('chartCompleted', 'completed', 'line-completed', 'dot-completed');
+  drawLineChart('chartDeferred', 'deferred', 'line-deferred', 'dot-deferred');
+  drawLineChart('chartSatisfaction', 'satisfaction', 'line-satisfaction', 'dot-satisfaction', '/5');
+});
+
+checkSession();
+renderAll();
+</script>
+
+</body>
+</html>

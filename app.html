@@ -1049,6 +1049,9 @@ body {
     </div>
     <div class="hdr-r">
       <button class="hdr-btn" onclick="openStore()">Store</button>
+      <button class="hdr-btn" id="adminSwitchBtn" onclick="window.location.href='admin.html'">
+  Switch to Admin
+</button>
       <button class="hdr-btn" onclick="logout()">Logout</button>
     </div>
   </header>
@@ -1322,7 +1325,7 @@ const PROFILES = [
     energy:'Evening Productive', motivation:'Client impact and relationship quality',
     stress:'Becomes more task-focused', workStyle:'Highly Organised',
     tasks:[{n:'Risk limit checks',p:'high'},{n:'Product structuring discussions',p:'high'},{n:'Pre-market research review',p:'medium'},{n:'P&L attribution analysis',p:'medium'},{n:'Market colour distribution',p:'low'}]},
-  { id:'zara', name:'Zara Martin', role:'Chief Compliance Officer', dept:'Compliance',
+  { id:'zara', name:'Zara Martin', email:'zara.martin@dailynudge.com', role:'Chief Compliance Officer', dept:'Compliance',
     energy:'Afternoon Energiser', motivation:'Purpose – economic stability',
     stress:'Internalises pressure', workStyle:'Highly Organised',
     tasks:[{n:'Internal audit liaison',p:'high'},{n:'Policy drafting and annual review',p:'high'},{n:'Transaction monitoring alert review',p:'medium'},{n:'Sanctions screening oversight',p:'medium'},{n:'Regulatory change impact assessment',p:'low'}]},
@@ -1378,7 +1381,40 @@ let S = {
   wb:{}, evalStar:0,
   drag:null, addCol:'first', addPri:'medium',
 };
+  
+  function updateAdminAccessButton() {
+  const btn = document.getElementById('adminSwitchBtn');
+  if (!btn) return;
 
+  if (S.profile.id === 'zara') {
+    btn.style.display = 'inline-flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+  
+async function setProfileFromLoggedInUser() {
+  const { data, error } = await client.auth.getUser();
+
+  if (error || !data.user) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const userEmail = data.user.email.toLowerCase();
+
+  const matchedProfile = PROFILES.find(p =>
+    p.email && p.email.toLowerCase() === userEmail
+  );
+
+  if (matchedProfile) {
+    S.profile = matchedProfile;
+  }
+
+  buildChips();
+  setBadge();
+  updateAdminAccessButton();
+}
 // ─────────────────────────────────────────────
 // PROFILE CHIPS
 // ─────────────────────────────────────────────
